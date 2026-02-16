@@ -1,0 +1,10 @@
+server:
+  secure: false # HTTP pour Connect Gateway
+  extraArgs:
+    - --auth-mode=server
+    - --auth-mode=client
+  service:
+    type: ClusterIP
+controller:
+  workflowNamespaces:
+    - data

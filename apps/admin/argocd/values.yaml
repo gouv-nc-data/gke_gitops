@@ -1,0 +1,9 @@
+server:
+  extraArgs:
+    - --insecure
+  service:
+    type: ClusterIP
+configs:
+  repositories:
+    gke-gitops:
+      url: https://github.com/gouv-nc-data/gke_gitops
