@@ -26,3 +26,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true # Nécessaire pour les gros CRDs Argo Workflows
