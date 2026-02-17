@@ -1,7 +1,7 @@
 server:
   secure: false # HTTP pour Connect Gateway
   extraArgs:
-    - --auth-mode=server
+    - --auth-mode=server # Commenter pour forcer le login (mode client)
     - --auth-mode=client
   service:
     type: ClusterIP

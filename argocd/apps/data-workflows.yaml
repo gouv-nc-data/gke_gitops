@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-workflows
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/gouv-nc-data/gke_gitops'
+    targetRevision: HEAD
+    path: apps/data/workflows
+    directory:
+      recurse: true
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
