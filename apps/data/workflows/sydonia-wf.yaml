@@ -1,0 +1,87 @@
+# Workflow de test : enchaîne un step de validation avec le déclenchement
+# du Cloud Run job bq2bq-sydonia existant.
+#
+# Lancement manuel :
+#   argo submit -n data sydonia-test-workflow.yaml --watch
+#
+# ──────────────────────────────────────────────────────────
+# MIGRATION FUTURE vers GKE natif :
+#
+# Pour migrer le step bq2bq directement sur GKE (sans Cloud Run) :
+# 1. Remplacer le template "trigger-cloud-run" par un container natif :
+#
+#    - name: bq2bq
+#      container:
+#        image: europe-west1-docker.pkg.dev/prj-dinum-data-templates-66aa/templates/bq2bq-dbt-docker:latest
+#        env:
+#          - name: GCS_BUCKET_NAME
+#            value: "bucket-bq2bq-sydonia-job01-prj-drd-p-bq-0b3e"
+#          - name: BQ_DATASET
+#            value: "sydonia_opendata"
+#          - name: GOOGLE_CLOUD_PROJECT
+#            value: "prj-drd-p-bq-0b3e"
+#          - name: API_CALLBACK_URL
+#            value: "https://data.gouv.nc/"
+#          - name: API_TOKEN
+#            valueFrom:
+#              secretKeyRef:
+#                name: datagouvnc-api-secret
+#                key: token
+#
+# 2. Ajouter les rôles BigQuery + GCS au module sydonia-workflow-sa dans drd-gitops :
+#      gcp_roles = [
+#        "roles/bigquery.dataEditor",
+#        "roles/bigquery.user",
+#        "roles/bigquery.jobUser",
+#        "roles/storage.objectViewer",
+#      ]
+#      secrets = { "API_TOKEN" = "datagouvnc_api_secret" }
+#
+# 3. Supprimer le module bq2bq-sydonia-jobs (Cloud Run) de drd-gitops/main.tf
+# ──────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: sydonia-wf
+  namespace: drd-jobs
+  labels:
+    workflows.argoproj.io/test: "true"
+spec:
+  serviceAccountName: sydonia-wf-sa
+  entrypoint: pipeline
+  templates:
+    - name: pipeline
+      dag:
+        tasks:
+          - name: step-db-extraction
+            template: db-to-bq
+          - name: trigger-bq2bq
+            template: trigger-cloud-run
+            dependencies: [step-db-extraction]
+
+    - name: db-to-bq
+      container:
+        image: europe-west1-docker.pkg.dev/prj-dinum-data-templates-66aa/templates/db-to-bq-dlt-img:sha-feb77bb
+        env:
+          - name: DB_URL_SECRET
+            value: "projects/prj-dinum-p-secret-mgnt-aaf4/secrets/sydonia-url-dlt-secret/versions/latest"
+          - name: BQ_DATASET_ID
+            value: "sydonia"
+          - name: DB_SCHEMA
+            value: "awunadm"
+          # Optional: useful for debugging or if the image requires it
+          - name: GOOGLE_CLOUD_PROJECT
+            value: "prj-drd-p-bq-0b3e"
+
+    - name: trigger-cloud-run
+      container:
+        image: google/cloud-sdk:slim
+        command: [sh, -c]
+        args:
+          - |
+            echo "Déclenchement du Cloud Run job bq2bq-sydonia..."
+            gcloud run jobs execute cloudrun-bq2bq-sydonia-job01-prj-drd-p-bq-0b3e \
+              --region europe-west1 \
+              --project prj-drd-p-bq-0b3e \
+              --wait
+            echo "Cloud Run job terminé ✓"
