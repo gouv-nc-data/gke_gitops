@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: 'https://github.com/gouv-nc-data/gke_gitops'
     targetRevision: HEAD
-    path: apps/data/workflows
+    path: apps/data/argo_workflow
     directory:
       recurse: true
   destination:
