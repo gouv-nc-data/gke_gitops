@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: data-workflows
+  name: workflows-app
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: 'https://github.com/gouv-nc-data/gke_gitops'
     targetRevision: HEAD
-    path: apps/data/Workflows
+    path: apps/data/workflows
     directory:
       recurse: true
   destination:
