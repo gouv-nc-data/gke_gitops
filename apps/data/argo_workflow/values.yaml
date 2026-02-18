@@ -8,3 +8,4 @@ server:
 controller:
   workflowNamespaces:
     - data
+    - drd-jobs

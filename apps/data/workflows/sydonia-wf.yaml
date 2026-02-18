@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: sydonia-db-to-bq
+  namespace: drd-jobs
+spec:
+  serviceAccountName: sydonia-wf
+  entrypoint: sydonia-pipeline
+  templates:
+  - name: sydonia-pipeline
+    steps:
+    - - name: ingestion
+        template: ingestion
+    - - name: transformation
+        template: transformation
+
+  - name: ingestion
+    container:
+      image: europe-west1-docker.pkg.dev/prj-dinum-data-templates-66aa/templates/db-to-bq-dlt-img:sha-feb77bb
+      env:
+      - name: DB_URL_SECRET
+        value: projects/prj-drd-p-bq/secrets/sydonia-url-dlt-secret/versions/latest
+      - name: BQ_DATASET_ID
+        value: sydonia
+      - name: DB_SCHEMA
+        value: awunadm
+      - name: GOOGLE_CLOUD_PROJECT
+        value: prj-drd-p-bq
+      - name: TABLES_EXCLUDE
+        value: "'unpkgtab','untodtab','unmodtab','unctytab','unshdtab','untoptab','untr1tab','untr2tab','uncp4tab','unloctab','unuomtab','unctntab','unindtab','uncartab','unatdtab','unrattab'"
+
+  - name: transformation
+    container:
+      image: google/cloud-sdk:slim
+      command: [sh, -c]
+      args:
+      - |
+        gcloud run jobs execute cloudrun-bq2bq-sydonia-job01-prj-drd-p-bq-0b3e --region europe-west1 --wait
