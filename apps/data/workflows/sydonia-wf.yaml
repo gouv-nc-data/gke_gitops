@@ -18,15 +18,38 @@ spec:
     container:
       image: europe-west1-docker.pkg.dev/prj-dinum-data-templates-66aa/templates/db-to-bq-dlt-img:sha-feb77bb
       command: ["python", "main.py"]
+      resources:
+        limits:
+          ephemeral-storage: 10Gi
+        requests:
+          ephemeral-storage: 2Gi
       env:
       - name: DB_URL_SECRET
         value: projects/prj-dinum-p-secret-mgnt-aaf4/secrets/sydonia-url-dlt-secret/versions/latest
       - name: BQ_DATASET_ID
         value: sydonia
-      - name: DB_SCHEMA
-        value: awunadm
+      # - name: DB_SCHEMA
+      #   value: awunadm
       - name: GOOGLE_CLOUD_PROJECT
         value: prj-drd-p-bq
+      - name: PYTHONUNBUFFERED
+        value: "1"
+      - name: SQL_CHUNK_SIZE
+        value: "100000"
+      - name: DATA_WRITER
+        value: "100000"
+      - name: DATA_WRITER__BUFFER_MAX_ITEMS
+        value: "100000"
+      - name: SOURCES__SQL_DATABASE__BACKEND
+        value: "pyarrow"
+      - name: NORMALIZE__DATA_WRITER__FILE_MAX_ITEMS
+        value: "100000"
+      - name: NORMALIZE__DATA_WRITER__FILE_MAX_BYTES
+        value: "50000000"
+      - name: NORMALIZE__WORKERS
+        value: "4"
+      - name: LOAD_WORKERS
+        value: "10"
       - name: TABLES_EXCLUDE
         value: unpkgtab,untodtab,unmodtab,unctytab,unshdtab,untoptab,untr1tab,untr2tab,uncp4tab,unloctab,unuomtab,unctntab,unindtab,uncartab,unatdtab,unrattab
 
