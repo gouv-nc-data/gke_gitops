@@ -59,4 +59,4 @@ spec:
       command: ["/bin/sh", "-c"]
       args:
       - |
-        gcloud run jobs execute cloudrun-bq2bq-sydonia-job01-prj-drd-p-bq-0b3e --region europe-west1 --wait
+        gcloud run jobs execute cloudrun-bq2bq-sydonia-job01-prj-drd-p-bq-0b3e --project prj-drd-p-bq-0b3e --region europe-west1 --wait
