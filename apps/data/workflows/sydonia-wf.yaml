@@ -4,7 +4,7 @@ metadata:
   name: sydonia-db-to-bq
   namespace: drd-jobs
 spec:
-  serviceAccountName: sydonia-wf
+  serviceAccountName: sydonia-wf-sa
   entrypoint: sydonia-pipeline
   templates:
   - name: sydonia-pipeline
