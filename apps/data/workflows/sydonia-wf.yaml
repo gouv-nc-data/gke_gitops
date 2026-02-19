@@ -20,7 +20,7 @@ spec:
       command: ["python", "main.py"]
       env:
       - name: DB_URL_SECRET
-        value: projects/prj-drd-p-bq/secrets/sydonia-url-dlt-secret/versions/latest
+        value: projects/prj-dinum-p-secret-mgnt-aaf4/secrets/sydonia-url-dlt-secret/versions/latest
       - name: BQ_DATASET_ID
         value: sydonia
       - name: DB_SCHEMA
