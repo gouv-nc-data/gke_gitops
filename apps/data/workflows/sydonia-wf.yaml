@@ -17,6 +17,7 @@ spec:
   - name: ingestion
     container:
       image: europe-west1-docker.pkg.dev/prj-dinum-data-templates-66aa/templates/db-to-bq-dlt-img:sha-feb77bb
+      command: ["python", "main.py"]
       env:
       - name: DB_URL_SECRET
         value: projects/prj-drd-p-bq/secrets/sydonia-url-dlt-secret/versions/latest
