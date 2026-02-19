@@ -27,12 +27,12 @@ spec:
       - name: GOOGLE_CLOUD_PROJECT
         value: prj-drd-p-bq
       - name: TABLES_EXCLUDE
-        value: "'unpkgtab','untodtab','unmodtab','unctytab','unshdtab','untoptab','untr1tab','untr2tab','uncp4tab','unloctab','unuomtab','unctntab','unindtab','uncartab','unatdtab','unrattab'"
+        value: unpkgtab,untodtab,unmodtab,unctytab,unshdtab,untoptab,untr1tab,untr2tab,uncp4tab,unloctab,unuomtab,unctntab,unindtab,uncartab,unatdtab,unrattab
 
   - name: transformation
     container:
       image: google/cloud-sdk:slim
-      command: [sh, -c]
+      command: ["/bin/sh", "-c"]
       args:
       - |
         gcloud run jobs execute cloudrun-bq2bq-sydonia-job01-prj-drd-p-bq-0b3e --region europe-west1 --wait
