@@ -5,7 +5,22 @@ server:
     - --auth-mode=client
   service:
     type: ClusterIP
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
 controller:
   workflowNamespaces:
     - data
     - drd-jobs
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+executor:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi

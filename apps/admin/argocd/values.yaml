@@ -3,6 +3,43 @@ server:
     - --insecure
   service:
     type: ClusterIP
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+controller:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  statusProcessors: 5 # Réduit de 20 à 5 pour économiser du CPU
+
+repoServer:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+redis:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Désactivation des composants non essentiels pour réduire le nombre de pods
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+applicationSet:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
 configs:
   repositories:
     gke-gitops:
