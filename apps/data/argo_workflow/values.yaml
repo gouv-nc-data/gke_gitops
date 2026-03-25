@@ -15,14 +15,14 @@ server:
       memory: 512Mi
 
 controller:
-  workflowNamespaces:
-    - data
-    - drd-jobs
   extraArgs:
     - --timezone=Pacific/Noumea
   extraEnv:
     - name: TZ
       value: Pacific/Noumea
+  # En mode cluster-wide (par défaut si singleNamespace=false), 
+  # il faut que cette liste soit vide pour surveiller tous les namespaces.
+  workflowNamespaces: []
   resources:
     requests:
       cpu: 250m
