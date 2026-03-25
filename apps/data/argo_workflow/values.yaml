@@ -3,7 +3,6 @@ server:
   extraArgs:
     - --auth-mode=server # Commenter pour forcer le login (mode client)
     - --auth-mode=client
-    - --timezone=Pacific/Noumea
   extraEnv:
     - name: TZ
       value: Pacific/Noumea
@@ -15,8 +14,7 @@ server:
       memory: 512Mi
 
 controller:
-  extraArgs:
-    - --timezone=Pacific/Noumea
+  extraArgs: []
   extraEnv:
     - name: TZ
       value: Pacific/Noumea
