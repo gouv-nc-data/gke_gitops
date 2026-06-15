@@ -22,11 +22,16 @@
 - Métrique #7 = `argo_workflows_queue_depth_gauge` (gauge, label `queue_name`) — Argo v3.7.9.
 - Controller Argo sert `/metrics` en **HTTPS** sur 9090.
 
+**Déployé (2026-06-16) :**
+
+- `gke_project` mergé sur `main` → apply CI OK : channel `google_chat` + 5 metrics + 5 policies logs + 3 policies GMP (8 au total) + APIs.
+- `gke_gitops` poussé sur `main` → ArgoCD : 7 apps Synced/Healthy (KSM + monitoring inclus), PodMonitorings actifs, métriques GMP ingérées, right-sizing appliqué (pods ~100m/256Mi au lieu de 250m/512Mi).
+
+**⚠️ Dépendance d'ordre GMP (gotcha rencontré) :** Cloud Monitoring **valide l'existence des métriques PromQL à la création** d'une `alert_policy`. La collecte GMP (`gke_gitops` : KSM + PodMonitoring) doit donc être déployée **et avoir ingéré ≥1 point** AVANT l'apply des 3 policies GMP (`gke_project`), sinon `Error 400: invalid PromQL metric`. Le 1er apply a échoué sur les 3 GMP, résolu par un re-run ~4 min plus tard une fois les métriques ingérées. Ordre correct : (1) push `gke_gitops`, (2) attendre l'ingestion, (3) apply `gke_project`.
+
 **Reste à faire (ops) :**
 
-1. `terraform apply` dans `gke_project` (channel + 8 policies).
-2. Commit/push `gke_gitops` → sync ArgoCD (KSM, PodMonitorings, right-sizing).
-3. Test "Send test notification" sur le channel Chat → vérifier la card dans le salon.
+1. Test "Send test notification" sur le channel Chat (console Cloud Monitoring) → vérifier la card dans le salon `spaces/AAQAkn-2dls`.
 
 ---
 
