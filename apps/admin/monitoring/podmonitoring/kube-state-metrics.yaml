@@ -1,0 +1,16 @@
+# Scrape GMP de kube-state-metrics (port http:8080).
+# Alimente l'alerte Cloud Monitoring #6 (kube_cronjob_next_schedule_time)
+# définie dans gke_project/monitoring.tf.
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kube-state-metrics
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

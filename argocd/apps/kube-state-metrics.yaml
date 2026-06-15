@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-state-metrics
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: 'https://prometheus-community.github.io/helm-charts'
+      chart: kube-state-metrics
+      targetRevision: 7.4.1
+      helm:
+        valueFiles:
+          - $values/apps/admin/monitoring/kube-state-metrics-values.yaml
+    - repoURL: 'https://github.com/gouv-nc-data/gke_gitops'
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

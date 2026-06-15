@@ -1,0 +1,24 @@
+# Scrape GMP des métriques du workflow-controller Argo (port metrics:9090).
+# Alimente les alertes Cloud Monitoring #7 (argo_workflows_queue_depth_count)
+# et #8 (argo_workflows_operation_duration_seconds) définies dans
+# gke_project/monitoring.tf.
+# PodMonitoring est namespacé : il doit vivre dans le ns du controller (data).
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: argo-workflow-controller
+  namespace: data
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: workflow-controller
+  endpoints:
+    # Le controller Argo sert ses métriques en HTTPS (TLS auto-signé) sur 9090,
+    # vérifié sur le cluster. Sans scheme=https + insecureSkipVerify, le scrape
+    # GMP échouerait ("HTTP request to an HTTPS server").
+    - port: metrics
+      scheme: https
+      tls:
+        insecureSkipVerify: true
+      path: /metrics
+      interval: 30s

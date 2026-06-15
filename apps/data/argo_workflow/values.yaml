@@ -8,13 +8,23 @@ server:
       value: Pacific/Noumea
   service:
     type: ClusterIP
+  # Right-sizing : requests calées sur l'usage réel + limits hautes pour le burst.
   resources:
     requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
       cpu: 250m
-      memory: 512Mi
+      memory: 256Mi
 
 controller:
   extraArgs: []
+  # Expose les métriques Prometheus du controller sur le port `metrics` (9090,
+  # path /metrics) — scrapées par GMP via le PodMonitoring défini dans
+  # apps/admin/monitoring/. Fournit argo_workflows_queue_depth_count,
+  # argo_workflows_operation_duration_seconds, etc.
+  metricsConfig:
+    enabled: true
   extraEnv:
     - name: TZ
       value: Pacific/Noumea
@@ -23,11 +33,20 @@ controller:
   workflowNamespaces: []
   resources:
     requests:
-      cpu: 250m
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      cpu: 500m
       memory: 512Mi
 
+# `executor` = ressources des conteneurs `init`/`wait` injectés dans CHAQUE pod
+# de workflow. Impacte le coût par workflow, pas un pod permanent. On garde une
+# marge raisonnable (le wait container gère artefacts/logs) sans surdimensionner.
 executor:
   resources:
     requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
       cpu: 250m
-      memory: 512Mi
+      memory: 256Mi

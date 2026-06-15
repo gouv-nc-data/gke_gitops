@@ -1,0 +1,16 @@
+# Values pour le chart prometheus-community/kube-state-metrics.
+# KSM expose les métriques d'état des objets K8s (dont kube_cronjob_*),
+# scrapées par GMP via le PodMonitoring kube-state-metrics.yaml.
+#
+# On reste minimal : labels standards, un seul replica, ressources modestes.
+replicas: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+# Le pod expose les métriques sur le port nommé "http" (8080).
+# RBAC (lecture cronjobs/jobs/pods/...) géré par le chart.

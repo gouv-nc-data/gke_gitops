@@ -1,3 +1,7 @@
+# Right-sizing : requests calées sur l'usage réel observé (cluster Autopilot
+# avec bursting actif → plancher 50m/52Mi). Les limits sont volontairement plus
+# hautes que les requests pour permettre le burst (gratuit, puisé dans la
+# capacité libre du nœud ; la facturation se fait sur les requests).
 server:
   extraArgs:
     - --insecure
@@ -5,27 +9,39 @@ server:
     type: ClusterIP
   resources:
     requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
       cpu: 250m
-      memory: 512Mi
+      memory: 256Mi
 
 controller:
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
   statusProcessors: 5 # Réduit de 20 à 5 pour économiser du CPU
 
 repoServer:
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 768Mi
 
 redis:
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
 
 # Désactivation des composants non essentiels pour réduire le nombre de pods
 dex:
@@ -37,8 +53,11 @@ notifications:
 applicationSet:
   resources:
     requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
       cpu: 250m
-      memory: 512Mi
+      memory: 256Mi
 
 configs:
   repositories:

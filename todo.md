@@ -2,13 +2,43 @@
 
 > Ce fichier décrit les ressources à créer. Il est destiné à être lu par un LLM qui produira le code correspondant.
 
+## État d'implémentation (MàJ 2026-06-16)
+
+**Fait (code écrit, validé, pas encore appliqué/commit) :**
+
+- **Channel Google Chat natif** — `gke_project/monitoring.tf` (type `google_chat`, label `space = spaces/AAQAkn-2dls`). L'app native est installée dans le salon → relais Pub/Sub abandonné. Variable `gchat_space` (non sensible).
+- **5 log-based metrics + 5 alert policies (section A)** — déjà présentes dans `gke_project/monitoring.tf`.
+- **GMP activé** (cluster Autopilot `gke01`, GMP managé par défaut) + **3 alert policies GMP** (#6 CronJob missed, #7 queue saturée, #8 ops controller lentes) dans `gke_project/monitoring.tf`, en conditions PromQL.
+- **Collecte GMP** côté `gke_gitops` (repo ArgoCD) :
+  - `apps/admin/monitoring/podmonitoring/argo-workflow-controller.yaml` (scrape controller, **HTTPS/TLS**),
+  - `kube-state-metrics` (chart 7.4.1) + son `PodMonitoring` (pour #6),
+  - apps ArgoCD `argocd/apps/{kube-state-metrics,monitoring}.yaml`, ns `monitoring`.
+- **Right-sizing** des pods ArgoCD + Argo WF (requests basses + limits hautes pour le bursting) → ~55 €/mois économisés.
+
+**Faits vérifiés sur l'environnement réel :**
+
+- Cluster Autopilot **GKE 1.35.5**, **bursting actif** → plancher 50m/52Mi par pod (pas 250m/512Mi). KSM ≈ **~2,5 €/mois**.
+- GKE managed kube-state-metrics **ne couvre PAS les CronJobs** → KSM auto-déployé requis pour #6.
+- Métrique #7 = `argo_workflows_queue_depth_gauge` (gauge, label `queue_name`) — Argo v3.7.9.
+- Controller Argo sert `/metrics` en **HTTPS** sur 9090.
+
+**Reste à faire (ops) :**
+
+1. `terraform apply` dans `gke_project` (channel + 8 policies).
+2. Commit/push `gke_gitops` → sync ArgoCD (KSM, PodMonitorings, right-sizing).
+3. Test "Send test notification" sur le channel Chat → vérifier la card dans le salon.
+
+---
+
 ## Décisions actées
 
 - **Monitoring** : Cloud Monitoring uniquement (pas de Prometheus self-hosted, pas de Grafana à opérer).
 - **Sources** :
   - **Logs (Cloud Logging)** pour tous les événements de fail.
   - **GMP (Google Managed Prometheus)** uniquement si l'un des cas d'usage de la section "Faut-il GMP" est confirmé.
-- **Alerting** : `google_monitoring_alert_policy` branchées sur les 3 notification channels email **déjà existants** dans `hub-vpc-gitops/main.tf` (`primary_contact`, `secondary_contact`, `org_admin_contact`).
+- **Alerting** : `google_monitoring_alert_policy` branchées sur :
+  - les 3 notification channels email **déjà existants** dans `hub-vpc-gitops/main.tf` (`primary_contact`, `secondary_contact`, `org_admin_contact`),
+  - un **nouveau channel natif Google Chat** (`google_monitoring_notification_channel` de type `google_chat`, section D) pointant sur le salon d'alertes. ⚠️ **MàJ 2026-06-15** : l'app native "Google Cloud Monitoring" pour Chat **est désormais autorisée et installée dans le salon** (space `spaces/AAQAkn-2dls`). Le relais Pub/Sub + Cloud Function + webhook initialement prévu est donc **abandonné** au profit du channel natif (1 seule ressource Terraform, 0 code).
 - **Exposition UI Argo WF** : `Service type=LoadBalancer` interne (Internal Passthrough Network LB L4) avec IP réservée dans le subnet GKE existant. Pas d'Ingress, pas de cert-manager pour ce premier jet.
 - **DNS** : nom interne uniquement à ce stade (pas de publication sous `*.gouv.nc`). Sera revu quand Teleport sera en prod on-premise.
 
@@ -103,6 +133,7 @@ notification_channels = [
   google_monitoring_notification_channel.primary_contact.id,
   google_monitoring_notification_channel.secondary_contact.id,
   google_monitoring_notification_channel.org_admin_contact.id,
+  google_monitoring_notification_channel.chat_alerts.id, # channel natif Google Chat, cf. section D
 ]
 ```
 
@@ -139,6 +170,45 @@ Conditionner ces ressources à une variable Terraform `enable_gmp` (default `fal
   | 8 | "Argo workflow long running"            | `histogram_quantile(0.95, rate(argo_workflows_operation_duration_seconds_bucket[5m])) > 1800` | true 10 min    |
 
   Le seuil exact de #6 doit être paramétrable par cronjob (label `cronjob`) — démarrer avec un seuil global de 1 h puis affiner.
+
+---
+
+### D. Repo `hub-vpc-gitops` — channel Google Chat natif
+
+> ⚠️ **MàJ 2026-06-15** — Refonte complète de cette section. L'app native "Google Cloud Monitoring" pour Chat est maintenant **autorisée et installée** dans le salon cible. Tout le relais Pub/Sub → Cloud Function → webhook (+ Secret Manager + code Python) décrit précédemment est **abandonné** : il devient inutile. On utilise le channel de notification natif `google_chat`, vérifié disponible sur le projet (`notificationChannelDescriptors/google_chat`, launch stage BETA, label unique `space` au format `spaces/{space}`).
+
+Cible Terraform : à ajouter dans `hub-vpc-gitops/main.tf` (à côté des channels email existants), ou un nouveau `monitoring.tf` si on regroupe avec la section A.
+
+#### D.1 — Pré-requis manuel (humain) — ✅ FAIT
+
+- [x] App "Google Cloud Monitoring" installée dans le salon Google Chat d'alertes.
+- [x] Space ID récupéré : **`AAQAkn-2dls`** → valeur du label = `spaces/AAQAkn-2dls`.
+
+#### D.2 — Ressource Terraform à créer (unique)
+
+```hcl
+resource "google_monitoring_notification_channel" "chat_alerts" {
+  display_name = "Google Chat — alertes GKE/Argo"
+  type         = "google_chat"
+  project      = module.project-factory.project_id
+  labels = {
+    space = "spaces/AAQAkn-2dls"
+  }
+}
+```
+
+C'est tout — pas de Pub/Sub, pas de Cloud Function, pas de SA dédié, pas de secret, pas de code applicatif. La mise en forme des notifications (card avec policy, ressource, état, lien console) est gérée nativement par l'app Google Cloud Monitoring.
+
+#### D.3 — Vérifications post-déploiement
+
+- [ ] `terraform apply` crée bien le channel (visible dans Cloud Monitoring → *Alerting* → *Notification channels* → onglet *Google Chat*).
+- [ ] Bouton **"Send test notification"** sur le channel → une card de test doit apparaître dans le salon `spaces/AAQAkn-2dls` sous quelques secondes.
+- [ ] Déclencher une vraie alerte (ex : tuer un pod du `workflow-controller`) et vérifier que la notification arrive dans le salon avec le lien vers l'incident.
+- [ ] Filtrer/router éventuellement par sévérité plus tard — itération suivante.
+
+#### D.4 — Coûts
+
+Channel de notification natif = **0 €/mois** (pas de Pub/Sub, pas de Function, pas de Secret Manager). Gain net vs l'ancienne approche : suppression de ~4 ressources GCP + 1 secret + 1 répertoire de code à maintenir.
 
 ---
 
@@ -218,8 +288,10 @@ resource "google_compute_firewall" "allow_argowf_ui_from_onprem" {
 
 ## Ordre d'implémentation suggéré
 
-1. A.1 + A.2 (alertes log-based — gain immédiat, ~0 €).
-2. B.1 → B.3 (exposition Argo WF UI via ILB).
-3. B.4 (vérifs).
-4. A.3 (GMP) **seulement après décision** sur les 2 questions de la section "Faut-il GMP".
-5. C (DNS, TLS, Teleport) — itérations suivantes.
+1. **D.2** : créer le channel natif `google_chat` (`chat_alerts`). _(D.1 déjà fait : app installée, space `AAQAkn-2dls`.)_
+2. **D.3** : tester le channel via "Send test notification" → vérifier la card dans le salon.
+3. **A.1 + A.2** : alertes log-based, branchées sur les 3 channels email **+** le channel `chat_alerts`.
+4. **B.1 → B.3** : exposition Argo WF UI via ILB.
+5. **B.4** : vérifs réseau / Palo Alto.
+6. **A.3** (GMP) **seulement après décision** sur les 2 questions de la section "Faut-il GMP".
+7. **C** (DNS, TLS, Teleport) — itérations suivantes.
