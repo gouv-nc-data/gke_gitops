@@ -13,4 +13,14 @@ spec:
   endpoints:
     - port: http
       path: /metrics
-      interval: 30s
+      # 60s suffit : l'alerte cronjob_missed_schedule évalue à 60s. 30s doublait
+      # le volume de samples ingérés (facturés) pour rien.
+      interval: 60s
+      metricRelabeling:
+        # Réduction coût GMP : ne garder que les métriques réellement utilisées.
+        # kube_cronjob_* alimente l'alerte #6 (cronjob_missed_schedule) ; kube_job_*
+        # donne la visibilité sur les jobs ELT. On élimine le gros du volume :
+        # kube_pod_* / kube_node_* / kube_*_labels à très forte cardinalité.
+        - sourceLabels: [__name__]
+          regex: kube_cronjob_.*|kube_job_.*
+          action: keep

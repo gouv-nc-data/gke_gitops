@@ -21,4 +21,14 @@ spec:
       tls:
         insecureSkipVerify: true
       path: /metrics
-      interval: 30s
+      # 60s suffit : les alertes #7/#8 évaluent à 60s (fenêtres 5-10 min).
+      interval: 60s
+      metricRelabeling:
+        # Réduction coût GMP : ne garder que les métriques Argo, qui alimentent
+        # l'alerte #7 (argo_workflows_queue_depth_gauge) et #8
+        # (argo_workflows_operation_duration_seconds_bucket). On élimine tout le
+        # bruit exposé par le controller : go_*, process_*, controller_runtime_*,
+        # workqueue_*, rest_client_*.
+        - sourceLabels: [__name__]
+          regex: argo_workflows_.*
+          action: keep
