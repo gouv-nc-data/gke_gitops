@@ -18,9 +18,22 @@ spec:
       interval: 60s
       metricRelabeling:
         # Réduction coût GMP : ne garder que les métriques réellement utilisées.
-        # kube_cronjob_* alimente l'alerte #6 (cronjob_missed_schedule) ; kube_job_*
-        # donne la visibilité sur les jobs ELT. On élimine le gros du volume :
+        # kube_cronjob_* alimente l'alerte #6 (cronjob_missed_schedule). On élimine
         # kube_pod_* / kube_node_* / kube_*_labels à très forte cardinalité.
+        #
+        # kube_job_* RETIRÉ (mesure du 2026-08-13) : ces métriques pesaient ~13 %
+        # de tous les samples GMP facturés du projet, pour un doublon sans usage.
+        #   - cardinalité NON bornée : KSM crée une série par *exécution* de Job
+        #     (job_name=neolan-to-bq-cronjob-29771520…), donc un volume qui croît
+        #     indéfiniment avec l'historique des CronJobs ELT. À l'inverse,
+        #     kube_cronjob_* est borné par le nombre de CronJobs déclarés (stable),
+        #     d'où sa conservation : ~2 % du volume, coût plat.
+        #   - redondant : les échecs de Jobs sont déjà couverts par la log-based
+        #     metric `k8s_job_failed` de gke_project/monitoring.tf (events K8s
+        #     BackoffLimitExceeded / Failed, labellés job_name + namespace), qui
+        #     déclenche l'alerte "Kubernetes Job failed". Rien n'est perdu.
+        # Vérifié : aucune alerte ni dashboard ne consomme kube_job_* (pas de
+        # Grafana dans ce repo, aucun dashboard custom côté Cloud Monitoring).
         - sourceLabels: [__name__]
-          regex: kube_cronjob_.*|kube_job_.*
+          regex: kube_cronjob_.*
           action: keep
